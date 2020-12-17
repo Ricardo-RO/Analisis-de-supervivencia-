@@ -1,0 +1,234 @@
+---
+title: "Funciones de Supervivencia"
+author: "Ricardo Rodriguez Ovilla"
+date: "12/04/2020"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Preparacion de los datos
+
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(cowplot)
+```
+
+Creamos una funcion general para graficar los distintos modelos parametricos, hemos decidido que solo obtenga como valor principal la funcion hazard o tambien llamada funcion de riesgo. Hechamos mano de las notas del curso para obtener cada funcion apartir de las demas. 
+
+No solo nos detuvimos en $S(t)$ y $h(t)$ , tambien grafiamos $H(t)$ y $f(t)$. 
+
+
+
+```{r}
+library(ggplot2)
+SurvGraph <- function(h, xlim = c(0,1), ylim = c(0,1)) {
+    ## Comenzamos con la programacion. 
+    ## h(t) hazard. 
+
+    ## H(t) funcion acumulativa de h(t) obtenida por integracin de (0,t).
+    ## Creamos un vector. 
+    H <- Vectorize(function(t) {
+        res <- integrate(h, lower = 0, upper = t)
+        res$value
+    })
+
+    ## S(t) Funcion de supervivencia : basada en  H(t) = -logS(t)
+    S <- function(t) {
+        exp(-1 * H(t))
+    }
+
+    ## f(t) Funcion de probabilidad (pdf): basada en  h(t) = f(t) / S(t)
+    f <- function(t) {
+        S(t) * h(t)
+    }
+
+    ## F(t) Funcion acumulativa  (cdf): Es el complemento de  S(t), F(t) = 1 - S(t)
+    F <- function(t) {
+        1 - S(t)
+    }
+
+    ## Especifico los parametros que quiero en la grafica a mi gusto. 
+    ggplot(data = data.frame(x = xlim), aes(x)) +
+        stat_function(fun = h, aes(color = "h")) +
+        stat_function(fun = H, aes(color = "H")) +
+        stat_function(fun = S, aes(color = "S")) +
+        stat_function(fun = f, aes(color = "f")) +
+        stat_function(fun = F, aes(color = "F")) +
+        scale_x_continuous(name = "time",  limit = xlim) +
+        scale_y_continuous(name = "value", limit = ylim) +
+        scale_color_manual(name = "functions",
+                           values = c("h" = "black", "H" = "red", "S" = "green", "f" = "blue", "F" = "purple"),
+                           breaks = c("h","H","S","f","F"),
+                           labels = c("h(t)","H(t)","S(t)","f(t)","F(t)"))  + theme_bw()
+}
+```
+
+
+#### Exponencial 
+
+La distribucion exponencial tiene la funcion hazard:
+$$ h(t) = \lambda $$
+
+La funcion de supervivencia es:
+
+$$ S(t) = exp\{-\lambda t \}$$
+
+```{r message=FALSE, warning=FALSE , fig.align='center'}
+## Definimos la funcion h(t) de la exponencial
+## Para lambda = 0.7
+h <- function(t) 0.7 + 0 * t
+SurvGraph(h = h, xlim = c(0,5), ylim = c(0,2)) +
+    labs(title = " Exponencial",subtitle =  "lambda = 0.7")
+```
+
+#### Weibull 
+
+La funcion de distribucion Weibull tiene los parametros $\lambda$ y $p$ donde 
+la funcion hazard es :
+
+$$ h(t) = \lambda^{p}pt^{p-1}  $$
+Con funcion de supervivencia:
+$$ S(t) = exp\{ -(\lambda t)^{p} \}  $$
+```{r message=FALSE, warning=FALSE,fig.align='center'}
+## Definimos la funcion h(t) de la Weibull
+h <- function(t) 2**{3}*3*t^{3-1}
+SurvGraph(h = h, xlim = c(0,2), ylim = c(0,3)) +
+    labs(title = " Weibull ",subtitle = "l = 2 , p = 3")
+```
+
+
+#### Log-Logistica
+
+Esta funcion tiene como funcion de supervivencia: 
+
+$$ S(t) = \frac{1}{1+ \lambda t^p}  $$
+Y funcion hazard:
+
+$$ h(t) = \frac{\lambda p  t ^{p-1}}{1+\lambda t^{p}} $$
+
+
+```{r message=FALSE, warning=FALSE,fig.align='center'}
+## Definimos la funcion h(t) de Log-Logistica
+## p = 5 y l = 3
+h <- function(t) (3*5*t^(5-1))/(1+3*t^{5})
+SurvGraph(h = h, xlim = c(0,3.5), ylim = c(0,4.5)) +
+    labs(title = " Log-Logistica ",subtitle = "lambda = 3 , p = 5")
+```
+
+
+#### Gompertz
+
+La funcion de distribucion es:
+$$ S(t) = exp \{- \frac{\lambda}{log(\phi)}(\phi^{t}-1) \} $$
+La funcion de Riesgo es :
+$$ h(t) = \lambda \phi ^t $$
+```{r message=FALSE, warning=FALSE,fig.align='center'}
+## Definimos la funcion h(t) de Gompertz
+## phi = 4 y l = 0.5
+h <- function(t) 0.5*((4)**t)
+SurvGraph(h = h, xlim = c(0,3.5), ylim = c(0,4.5)) +
+    labs(title = " Gompertz",subtitle = "lambda = 0.5 , phi = 4")
+```
+
+
+#### Distribucion Geometrica
+
+La funcion de densidad es $f(x) = p(1-p)^{t}$ por lo que la funcion de distribucion es :
+$$S(t) = (1-p)^{t} $$
+Y funcion hazard:
+$$ h(t) = \frac{p(1-p)^{t}}{(1-p)^{t}} = p $$
+
+```{r message=FALSE, warning=FALSE,fig.align='center'}
+## Definimos la funcion h(t) geometrica
+## p = 0.8
+h <- function(t) 0.8 + 0*t
+SurvGraph(h = h, xlim = c(0,3.5), ylim = c(0,4.5)) +
+    labs(title = "  Geometrica",subtitle = " p = 0.8")
+```
+
+## Casos Especiales 
+
+Dado que estas son funciones hazard un poco compleja usaremos codigo nuevo para calcular $S(t)$ y $h(t)$, esto porque estan en funcion de una integral y la funcion anteriormente creada no estaba pensada para este tipo de funciones de riesgo. 
+
+#### Gamma
+
+Su funcion de riesgo es: 
+
+$$ h(t)=\frac{f(t)}{S(t)}=\frac{\frac{\lambda^{k} t^{k-1} \exp \{-\lambda t\}}{\Gamma(k)}}{1-G I(k, \lambda t)}  $$
+Con funcion de supervivencia :
+
+$$ S(t)=\int_{t}^{\infty} f(u) d u=1-G I(k, \lambda t) $$
+```{r message=FALSE, warning=FALSE}
+library(flexsurv)
+```
+
+```{r echo=FALSE}
+hazard = hgamma((1:100)/100,shape = 3.6,rate = 10.89)
+# De la acumulativa saco S(t)
+hazard_C = Hgamma((1:100)/100,shape = 3.6,rate = 10.89)
+S_t = exp(-hazard_C)
+Survi = data.frame(hazard,S_t)
+c = ggplot() + 
+  geom_line(data = Survi , aes(y=hazard,x=1:100),color="blue") +
+   labs(title = "Gamma",subtitle = " shape = 3.6 , rate=10.89 ") +
+  xlab("Time") +
+  theme_bw()
+v = ggplot() + 
+      geom_line(data = Survi , aes(y=S_t,x=1:100),color = "red")+
+       xlab("Time") + ylab("S(t)") +
+      theme_bw()
+
+```
+
+```{r fig.align='center'}
+gridExtra::grid.arrange(c,v)
+```
+
+
+#### LogNormal
+
+Su funcion de riesgo es:
+
+$$ h(t) = \frac{ \frac{1}{\sqrt{2\pi\sigma^2 t }} exp\{ -\frac{(\log(t)-\mu)^2}{2\sigma^2}) \}    }{1-\Phi(\frac{\log(t)-\mu}{\sigma})}  $$
+
+```{r echo=FALSE}
+hazard = hlnorm((1:100)/100,meanlog = 2.5,sdlog = 6.66)
+# De la acumulativa saco S(t)
+hazard_C =Hlnorm((1:100)/100,meanlog = 2.5,sdlog = 6.66)
+S_t = exp(-hazard_C)
+Survi = data.frame(hazard,S_t)
+c = ggplot() + 
+  geom_line(data = Survi , aes(y=hazard,x=1:100),color="blue") +
+   labs(title = "Lognormal",subtitle = "Meanlog = 2.5 , Sdlog = 6.66 ") +
+  xlab("Time") +
+  theme_bw()
+v = ggplot() + 
+      geom_line(data = Survi , aes(y=S_t,x=1:100),color = "red")+
+       xlab("Time") + ylab("S(t)") +
+      theme_bw()
+```
+
+```{r,fig.align='center'}
+gridExtra::grid.arrange(c,v)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
